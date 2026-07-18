@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Planilhas Inteligente</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --radius: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--background);
+            color: var(--text);
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        header h1 {
+            color: var(--primary);
+            font-size: 2.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Grid Principal: Formulário na Esquerda, Planilhas na Direita */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--surface);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            height: fit-content;
+        }
+
+        h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1.2rem;
+            color: var(--text);
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        /* Formulários */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 1rem;
+            outline: none;
+            transition: border 0.2s;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary);
+        }
+
+        button {
+            width: 100%;
+            padding: 0.7rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        /* Visualização das Planilhas */
+        .sheet-selector {
+            margin-bottom: 1.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            text-align: left;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background-color: #f1f5f9;
+            font-weight: 600;
+        }
+
+        .input-qty {
+            width: 70px;
+            padding: 0.3rem;
+            text-align: center;
+        }
+
+        .total-row {
+            font-weight: bold;
+            background-color: #f8fafc;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+        
+        .empty-message {
+            color: var(--text-muted);
+            text-align: center;
+            padding: 2rem;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Gerenciador de Planilhas</h1>
+        <p style="color: var(--text-muted)">Cadastre itens e calcule valores dinamicamente</p>
+    </header>
+
+    <div class="main-layout">
+        <!-- Coluna da Esquerda: Cadastro -->
+        <div class="card">
+            <h2>Cadastrar Item</h2>
+            <form id="form-cadastro">
+                <div class="form-group">
+                    <label for="nome-planilha">Nome da Planilha (Destino)</label>
+                    <input type="text" id="nome-planilha" placeholder="Ex: Estoque, Mercado..." required list="planilhas-existentes">
+                    <datalist id="planilhas-existentes"></datalist>
+                </div>
+                <div class="form-group">
+                    <label for="nome-item">Nome do Item</label>
+                    <input type="text" id="nome-item" placeholder="Ex: Camiseta" required>
+                </div>
+                <div class="form-group">
+                    <label for="valor-item">Valor Unitário (R$)</label>
+                    <input type="number" id="valor-item" step="0.01" min="0.01" placeholder="0.00" required>
+                </div>
+                <button type="submit">Adicionar à Planilha</button>
+            </form>
+        </div>
+
+        <!-- Coluna da Direita: Visualização -->
+        <div class="card" style="min-height: 350px;">
+            <h2>Visualizar Planilha</h2>
+            
+            <div class="sheet-selector">
+                <label for="select-planilha">Selecione uma Planilha:</label>
+                <select id="select-planilha" onchange="renderizarTabela()">
+                    <option value="">-- Escolha uma planilha --</option>
+                </select>
+            </div>
+
+            <div id="tabela-container">
+                <p class="empty-message">Selecione ou crie uma planilha para exibir os dados.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Estrutura de dados: { "NomeDaPlanilha": [ { id, nome, valor, quantidade }, ... ] }
+    let db = JSON.parse(localStorage.getItem('planilhas_db')) || {};
+
+    const form = document.getElementById('form-cadastro');
+    const selectPlanilha = document.getElementById('select-planilha');
+    const datalistPlanilhas = document.getElementById('planilhas-existentes');
+    const tabelaContainer = document.getElementById('tabela-container');
+
+    // Inicializa os seletores de planilha na tela
+    atualizarSeletores();
+
+    // Evento de Cadastro
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const nomePlanilha = document.getElementById('nome-planilha').value.trim();
+        const nomeItem = document.getElementById('nome-item').value.trim();
+        const valorItem = parseFloat(document.getElementById('valor-item').value);
+
+        // Se a planilha não existir, cria uma nova
+        if (!db[nomePlanilha]) {
+            db[nomePlanilha] = [];
+        }
+
+        // Adiciona o item à planilha correspondente
+        db[nomePlanilha].push({
+            id: Date.now() + Math.random().toString(36).substr(2, 5), // ID único simples
+            nome: nomeItem,
+            valor: valorItem,
+            quantidade: 1 // Quantidade inicial padrão
+        });
+
+        salvarDados();
+        atualizarSeletores();
+        
+        // Define a planilha recém-alterada como a ativa e renderiza
+        selectPlanilha.value = nomePlanilha;
+        renderizarTabela();
+
+        // Limpa apenas os campos do item
+        document.getElementById('nome-item').value = '';
+        document.getElementById('valor-item').value = '';
+        document.getElementById('nome-item').focus();
+    });
+
+    // Salva os dados atuais no LocalStorage do navegador
+    function salvarDados() {
+        localStorage.setItem('planilhas_db', JSON.stringify(db));
+    }
+
+    // Atualiza os componentes dropdown e autocomplete de planilhas
+    function atualizarSeletores() {
+        const nomesPlanilhas = Object.keys(db);
+        
+        // Guarda o valor selecionado antes de resetar
+        const atualmenteSelecionada = selectPlanilha.value;
+
+        // Limpa as opções
+        selectPlanilha.innerHTML = '<option value="">-- Escolha uma planilha --</option>';
+        datalistPlanilhas.innerHTML = '';
+
+        nomesPlanilhas.forEach(nome => {
+            // Preenche o Select de visualização
+            const option = document.createElement('option');
+            option.value = nome;
+            option.textContent = nome;
+            selectPlanilha.appendChild(option);
+
+            // Preenche o Autocomplete do formulário
+            const dataOption = document.createElement('option');
+            dataOption.value = nome;
+            datalistPlanilhas.appendChild(dataOption);
+        });
+
+        // Restaura a seleção se ela ainda existir
+        if (nomesPlanilhas.includes(atualmenteSelecionada)) {
+            selectPlanilha.value = Math.random;
+            selectPlanilha.value = atualmenteSelecionada;
+        }
+    }
+
+    // Atualiza a quantidade dinamicamente e recalcula
+    function atualizarQuantidade(nomePlanilha, itemId, novaQtd) {
+        const qtd = parseInt(novaQtd) || 0;
+        const item = db[nomePlanilha].find(i => i.id === itemId);
+        if (item) {
+            item.quantidade = qtd;
+            salvarDados();
+            recalcularTotais(nomePlanilha);
+        }
+    }
+
+    // Recalcula apenas os valores de exibição sem remontar a tabela inteira do DOM
+    function recalcularTotais(nomePlanilha) {
+        let geral = 0;
+        db[nomePlanilha].forEach(item => {
+            const totalItem = item.valor * item.quantidade;
+            geral += totalItem;
+            
+            // Atualiza a célula do total do item na tela
+            const celulaTotal = document.getElementById(`total-${item.id}`);
+            if (celulaTotal) {
+                celulaTotal.textContent = formatarMoeda(totalItem);
+            }
+        });
+
+        // Atualiza a célula do total geral na tela
+        const celulaGeral = document.getElementById('total-geral');
+        if (celulaGeral) {
+            celulaGeral.textContent = formatarMoeda(geral);
+        }
+    }
+
+    // Auxiliar para formatação de dinheiro em PT-BR
+    function formatarMoeda(valor) {
+        return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    // Renderiza a tabela completa com base na planilha selecionada
+    function renderizarTabela() {
+        const nomePlanilha = selectPlanilha.value;
+
+        if (!nomePlanilha || !db[nomePlanilha] || db[nomePlanilha].length === 0) {
+            tabelaContainer.innerHTML = '<p class="empty-message">Nenhum item cadastrado nesta planilha.</p>';
+            return;
+        }
+
+        const itens = db[nomePlanilha];
+        let tabelaHTML = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Valor Unit.</th>
+                        <th style="text-align: center;">Quantidade</th>
+                        <th class="text-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        let totalGeral = 0;
+
+        itens.forEach(item => {
+            const totalItem = item.valor * item.quantidade;
+            totalGeral += totalItem;
+
+            tabelaHTML += `
+                <tr>
+                    <td>${item.nome}</td>
+                    <td>${formatarMoeda(item.valor)}</td>
+                    <td style="text-align: center;">
+                        <input type="number" class="input-qty" min="0" value="${item.quantidade}" 
+                            oninput="atualizarQuantidade('${nomePlanilha}', '${item.id}', this.value)">
+                    </td>
+                    <td class="text-right" id="total-${item.id}">${formatarMoeda(totalItem)}</td>
+                </tr>
+            `;
+        });
+
+        tabelaHTML += `
+                    <tr class="total-row">
+                        <td colspan="3">Total Geral</td>
+                        <td class="text-right" id="total-geral">${formatarMoeda(totalGeral)}</td>
+                    </tr>
+                </tbody>
+            </table>
+        `;
+
+        tabelaContainer.innerHTML = tabelaHTML;
+    }
+</script>
+
+</body>
+</html>
