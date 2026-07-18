@@ -565,11 +565,43 @@
    Os cadastros ficam salvos no Firestore e são compartilhados entre
    TODOS os visitantes do site, em tempo real: quando alguém cria, edita
    ou apaga um cadastro, todo mundo vê a atualização na hora, sem precisar
-   recarregar a página.
+   recarregar a página. */
 
-   Antes de publicar, preencha suas credenciais em firebase-config.js
-   (veja o README para o passo a passo). */
-import { firebaseConfig, siteAccessEmail } from './firebase-config.js';
+/* ======================================================================
+   CONFIGURAÇÃO — EDITE AQUI ANTES DE PUBLICAR (veja o README)
+
+   1. Crie um projeto em https://console.firebase.google.com
+   2. Vá em "Compilação → Firestore Database" → "Criar banco de dados".
+   3. Vá em "Compilação → Authentication" → "Vamos começar" → ative o
+      provedor "E-mail/senha".
+   4. Em "Authentication → Users → Add user", crie UM usuário com um
+      e-mail qualquer (ex.: acesso@seusite.com) e a senha que as pessoas
+      vão usar para entrar no site. Essa é a "senha do site" — todo mundo
+      usa a mesma.
+   5. Copie esse e-mail para SITE_ACCESS_EMAIL logo abaixo (tem que ser
+      idêntico ao cadastrado no passo 4).
+   6. Vá em "Configurações do projeto" (engrenagem) → aba "Geral" → role
+      até "Seus aplicativos" → clique no ícone "</>" para adicionar um
+      app da Web → copie os valores gerados para FIREBASE_CONFIG abaixo.
+
+   Este trecho pode ficar público no repositório: essas chaves apenas
+   identificam o projeto — quem protege os dados de verdade são o login
+   e as regras de segurança do Firestore (Passo 3 do README).
+   ====================================================================== */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCar9pXybtsDjJllXVZI5goe7jYjbWASb4",
+  authDomain: "planilhasbaiano.firebaseapp.com",
+  projectId: "planilhasbaiano",
+  storageBucket: "planilhasbaiano.firebasestorage.app",
+  messagingSenderId: "941511007829",
+  appId: "1:941511007829:web:876b9291d7435245cf3edc"
+};
+
+// E-mail do usuário único criado no passo 4 acima.
+// A senha desse usuário é a senha que as pessoas vão digitar para entrar no site.
+const SITE_ACCESS_EMAIL = "baiano@gmail.com";
+/* ====================================================================== */
+
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js';
 import {
   getFirestore, collection, doc, setDoc, deleteDoc,
@@ -586,18 +618,18 @@ let erroConexao = null;
 let unsubscribeFirestore = null;
 
 try{
-  const app = initializeApp(firebaseConfig);
+  const app = initializeApp(FIREBASE_CONFIG);
   db = getFirestore(app);
   auth = getAuth(app);
   planilhasCol = collection(db, 'planilhas');
 }catch(e){
   console.error('Falha ao inicializar o Firebase', e);
-  erroConexao = 'Não foi possível inicializar o Firebase. Confira firebase-config.js.';
+  erroConexao = 'Não foi possível inicializar o Firebase. Confira a configuração no topo do script.';
 }
 
 /* ---------- Acesso restrito (senha compartilhada) ----------
    O login usa um único usuário do Firebase Authentication (e-mail fixo
-   definido em firebase-config.js) e a senha que a pessoa digita. Assim,
+   definido acima em SITE_ACCESS_EMAIL) e a senha que a pessoa digita. Assim,
    o acesso ao site — e, mais importante, a leitura/escrita no Firestore —
    só funciona para quem souber a senha, já que as regras do Firestore
    exigem "request.auth != null" (veja o README). */
@@ -647,7 +679,7 @@ if(auth){
     btn.textContent = 'Entrando...';
     document.getElementById('loginErro').textContent = '';
     try{
-      await signInWithEmailAndPassword(auth, siteAccessEmail, senha);
+      await signInWithEmailAndPassword(auth, SITE_ACCESS_EMAIL, senha);
       document.getElementById('inputSenha').value = '';
     }catch(err){
       console.error('Falha no login', err);
@@ -682,7 +714,7 @@ function iniciarSincronizacao(){
     },
     (err)=>{
       console.error('Falha ao sincronizar com o Firestore', err);
-      erroConexao = 'Não foi possível conectar ao Firestore. Confira firebase-config.js e as regras de segurança (veja o README).';
+      erroConexao = 'Não foi possível conectar ao Firestore. Confira a configuração no topo do script e as regras de segurança (veja o README).';
       carregado = true;
       render();
     }
@@ -762,7 +794,7 @@ async function salvarRascunho(){
     return;
   }
   if(!planilhasCol){
-    telaAtual.erro = 'Firebase não está configurado. Confira firebase-config.js.';
+    telaAtual.erro = 'Firebase não está configurado. Confira a configuração no topo do script.';
     render();
     return;
   }
